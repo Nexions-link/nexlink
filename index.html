@@ -279,6 +279,21 @@ hr { border:0; border-top:1px solid var(--line); margin:16px 0; }
 @media(min-width:500px) {
   .app { padding-left:22px; padding-right:22px; }
 }
+.request-card {
+  border: 1px solid #405a7d;
+  background: #151e2a;
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 12px;
+}
+.request-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.request-actions button {
+  flex: 1;
+}
 </style>
 </head>
 
@@ -307,6 +322,7 @@ hr { border:0; border-top:1px solid var(--line); margin:16px 0; }
   <p class="muted small" id="nearby-status">Подключаемся к сети…</p>
   <div id="nearby-users"></div>
 </div>
+<div id="incoming-requests"></div>
       <div class="card">
         <h3>Подключить собеседника</h3>
         <p class="muted small">Создай чат, а затем обменяйся QR-кодами со вторым телефоном.</p>
@@ -677,7 +693,7 @@ function makePC() {
   pc.ondatachannel = event => setupChannel(event.channel);
   return pc;
 }
-function setupChannel(ch) {
+function setupChannel(ch, chatId = activeChatId) {
   channel = ch;
 
   channel.onopen = () => {
@@ -691,9 +707,7 @@ function setupChannel(ch) {
     toast("Ошибка канала сообщений.");
   };
   channel.onmessage = event => {
-    const chat = getActiveChat();
-    if (!chat) return;
-
+    if (!chats.some(c => c.id === chatId)) return;
     let text = String(event.data);
     try {
       const packet = JSON.parse(text);
@@ -701,7 +715,7 @@ function setupChannel(ch) {
         text = packet.text;
       }
     } catch (_) {}
-    addMessage(chat.id, text, false);
+    addMessage(chatId, text, false);
   };
 }
 function waitIce() {
@@ -964,13 +978,318 @@ let supabaseClient = null;
 let presenceChannel = null;
 let onlineUsers = new Map();
 let presenceStarted = false;
+let currentUserId = null;
+let signalChannel = null;
+let incomingRequests = [];
+let pendingOutgoing = null;
+let pendingAccepted = null;
 
+async function sendSignal(to, data) {
+  if (!signalChannel) {
+    throw new Error("Канал сигнализации ещё не готов.");
+  }
+
+  const { error } = await signalChannel.send({
+    type: "broadcast",
+    event: "signal",
+    payload: {
+      ...data,
+      from: currentUserId,
+      to,
+      fromName: profile.name || "Пользователь"
+    }
+  });
+
+  if (error) throw error;
+}
+
+function renderIncomingRequests() {
+  const container = $("incoming-requests");
+  container.replaceChildren();
+
+  incomingRequests.forEach(request => {
+    const card = document.createElement("div");
+    card.className = "request-card";
+
+    const title = document.createElement("h3");
+    title.textContent = "Запрос на чат";
+
+    const description = document.createElement("p");
+    description.className = "muted small";
+    description.textContent =
+      (request.fromName || "Пользователь") +
+      " хочет начать переписку.";
+
+    const actions = document.createElement("div");
+    actions.className = "request-actions";
+
+    const accept = document.createElement("button");
+    accept.className = "primary";
+    accept.textContent = "Принять";
+
+    const reject = document.createElement("button");
+    reject.textContent = "Отклонить";
+
+    accept.onclick = async () => {
+      accept.disabled = true;
+      reject.disabled = true;
+
+      try {
+        incomingRequests = incomingRequests.filter(
+          item => item.requestId !== request.requestId
+        );
+        renderIncomingRequests();
+
+        const chat = newChatObject(request.fromName || "Собеседник");
+        chat.peerId = request.from;
+        chats.unshift(chat);
+        saveChats();
+        pendingAccepted = {
+          requestId: request.requestId,
+          peerId: request.from,
+          chatId: chat.id
+        };
+
+        openChat(chat.id);
+        setConnectionStatus("Ожидаем соединения…");
+
+        await sendSignal(request.from, {
+          type: "accepted",
+          requestId: request.requestId
+        });
+
+        toast("Запрос принят. Устанавливаем соединение…");
+      } catch (error) {
+        console.error(error);
+        toast(error.message || "Не удалось принять запрос.");
+      }
+    };
+
+    reject.onclick = async () => {
+      incomingRequests = incomingRequests.filter(
+        item => item.requestId !== request.requestId
+      );
+      renderIncomingRequests();
+
+      try {
+        await sendSignal(request.from, {
+          type: "rejected",
+          requestId: request.requestId
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    actions.append(accept, reject);
+    card.append(title, description, actions);
+    container.appendChild(card);
+  });
+}
+
+async function handleSignal(payload) {
+  if (!payload || payload.to !== currentUserId) return;
+
+  try {
+    if (payload.type === "request") {
+      if (incomingRequests.some(
+        item => item.requestId === payload.requestId
+      )) return;
+
+      incomingRequests.push(payload);
+      renderIncomingRequests();
+      return;
+    }
+
+    if (payload.type === "rejected") {
+      if (pendingOutgoing?.requestId === payload.requestId) {
+        pendingOutgoing = null;
+        toast("Собеседник отклонил запрос.");
+      }
+      return;
+    }
+
+    if (payload.type === "accepted") {
+      if (
+        !pendingOutgoing ||
+        pendingOutgoing.requestId !== payload.requestId
+      ) return;
+
+      const outgoing = pendingOutgoing;
+      pendingOutgoing = null;
+
+      const chat = chats.find(c => c.id === outgoing.chatId);
+      if (!chat) throw new Error("Чат не найден.");
+
+      activeChatId = chat.id;
+      openChat(chat.id);
+
+      const connection = makePC();
+      setupChannel(
+        connection.createDataChannel("nexlink-chat"),
+        chat.id
+      );
+
+      setConnectionStatus("Создаём соединение…");
+
+      const offer = await connection.createOffer();
+      await connection.setLocalDescription(offer);
+      await waitIce();
+
+      if (!pc || !pc.localDescription) {
+        throw new Error("Не удалось создать описание соединения.");
+      }
+
+      await sendSignal(outgoing.peerId, {
+        type: "offer",
+        requestId: outgoing.requestId,
+        sdp: pc.localDescription.sdp
+      });
+
+      toast("Запрос принят. Соединяем телефоны…");
+      return;
+    }
+
+    if (payload.type === "offer") {
+      if (
+        !pendingAccepted ||
+        pendingAccepted.requestId !== payload.requestId ||
+        pendingAccepted.peerId !== payload.from
+      ) return;
+
+      const accepted = pendingAccepted;
+      const connection = makePC();
+
+      setConnectionStatus("Создаём ответ…");
+
+      await connection.setRemoteDescription({
+        type: "offer",
+        sdp: payload.sdp
+      });
+
+      const answer = await connection.createAnswer();
+      await connection.setLocalDescription(answer);
+      await waitIce();
+
+      if (!pc || !pc.localDescription) {
+        throw new Error("Не удалось создать ответ.");
+      }
+
+      await sendSignal(payload.from, {
+        type: "answer",
+        requestId: accepted.requestId,
+        sdp: pc.localDescription.sdp
+      });
+
+      pendingAccepted = null;
+      toast("Ответ отправлен. Устанавливаем соединение…");
+      return;
+    }
+
+    if (payload.type === "answer") {
+      if (
+        !pendingOutgoing &&
+        (!pc || !pc.localDescription ||
+         pc.localDescription.type !== "offer")
+      ) {
+        // Соединение могло уже перейти к ожиданию ответа.
+        if (!pc || !pc.localDescription ||
+            pc.localDescription.type !== "offer") return;
+      }
+
+      if (!pc || !pc.localDescription ||
+          pc.localDescription.type !== "offer") return;
+
+      await pc.setRemoteDescription({
+        type: "answer",
+        sdp: payload.sdp
+      });
+
+      clearQR();
+      setConnectionStatus("Ответ принят. Ждём соединения…");
+      return;
+    }
+  } catch (error) {
+    console.error("NexLink signal:", error);
+    toast(error.message || "Ошибка установки соединения.");
+  }
+}
+
+async function setupSignalChannel(userId) {
+  signalChannel = supabaseClient.channel(
+    "nexlink-signal-" + userId
+  );
+
+  signalChannel.on(
+    "broadcast",
+    { event: "signal" },
+    ({ payload }) => {
+      handleSignal(payload);
+    }
+  );
+
+  await new Promise((resolve, reject) => {
+    signalChannel.subscribe(status => {
+      if (status === "SUBSCRIBED") {
+        resolve();
+      } else if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT"
+      ) {
+        reject(new Error("Не удалось подключить канал сообщений."));
+      }
+    });
+  });
+}
+
+async function connectToUser(user) {
+  if (!signalChannel) {
+    toast("Сеть ещё подключается. Попробуй через секунду.");
+    return;
+  }
+
+  if (pendingOutgoing || pendingAccepted) {
+    toast("Сначала заверши текущий запрос на подключение.");
+    return;
+  }
+
+  const chat = newChatObject(user.name || "Собеседник");
+  chat.peerId = user.id;
+  chats.unshift(chat);
+  saveChats();
+  openChat(chat.id);
+
+  const requestId =
+    "req-" + Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 8);
+
+  pendingOutgoing = {
+    requestId,
+    peerId: user.id,
+    chatId: chat.id
+  };
+
+  setConnectionStatus("Запрос отправлен…");
+
+  try {
+    await sendSignal(user.id, {
+      type: "request",
+      requestId
+    });
+
+    toast("Запрос отправлен. Ждём ответа…");
+  } catch (error) {
+    pendingOutgoing = null;
+    console.error(error);
+    toast(error.message || "Не удалось отправить запрос.");
+  }
+}
 function renderNearbyUsers() {
   const container = $("nearby-users");
   container.replaceChildren();
 
   const users = [...onlineUsers.values()]
-    .filter(user => user.id !== profile.id);
+    .filter(user => user.id !== currentUserId);
 
   if (!users.length) {
     const empty = document.createElement("p");
@@ -983,7 +1302,14 @@ function renderNearbyUsers() {
   users.forEach(user => {
     const item = document.createElement("div");
     item.className = "chat-item";
-
+item.setAttribute("role", "button");
+item.tabIndex = 0;
+item.onclick = () => connectToUser(user);
+item.onkeydown = event => {
+  if (event.key === "Enter" || event.key === " ") {
+    connectToUser(user);
+  }
+};
     const avatar = document.createElement("div");
     avatar.className = "avatar";
     avatar.textContent = (user.name || "П").trim().charAt(0).toUpperCase();
@@ -1039,7 +1365,8 @@ async function startNearbyPresence() {
     if (!userId) {
       throw new Error("Не удалось получить ID пользователя.");
     }
-
+currentUserId = userId;
+await setupSignalChannel(userId);
     presenceChannel = supabaseClient.channel("nexlink-online", {
       config: {
         presence: { key: userId }
