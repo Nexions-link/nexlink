@@ -1216,7 +1216,9 @@ async function handleSignal(payload) {
 }
 
 async function setupSignalChannel(userId) {
-  signalChannel = supabaseClient.channel("nexlink-signals");
+  signalChannel = supabaseClient.channel(
+  "nexlink-signal-" + userId
+);
 
   );
 
