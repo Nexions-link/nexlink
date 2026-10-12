@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0d10">
+<title>NexLink — тест связи</title>
+<style>
+  body {
+    margin: 0; padding: 20px; background: #0b0d10;
+    color: #f1f4f8; font: 16px -apple-system, sans-serif;
+  }
+  main { max-width: 600px; margin: auto; }
+  h1 { font-size: 25px; }
+  p { color: #aab5c4; line-height: 1.5; }
+  textarea, input {
+    box-sizing: border-box; width: 100%; padding: 12px;
+    background: #151b23; color: white; border: 1px solid #354152;
+    border-radius: 10px; margin: 7px 0 12px;
+  }
+  textarea { min-height: 130px; font-size: 12px; }
+  button {
+    width: 100%; padding: 13px; margin: 5px 0;
+    border: 0; border-radius: 11px; background: #a9c8ff;
+    color: #101721; font-weight: 700; font-size: 14px;
+  }
+  #status {
+    padding: 13px; border-radius: 10px; background: #151b23;
+    overflow-wrap: anywhere;
+  }
+  #log {
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    font-size: 12px; color: #b9c6d6;
+  }
+  #messages {
+    min-height: 60px; white-space: pre-wrap; overflow-wrap: anywhere;
+    background: #151b23; border-radius: 10px; padding: 12px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>NexLink · WebRTC Test</h1>
+  <p>Проверка прямой передачи сообщений между двумя браузерами. Серверы STUN и TURN не используются.</p>
+
+  <div id="status">Статус: соединение не создано</div>
+
+  <h3>1. Создать предложение — телефон A</h3>
+  <button id="offerBtn">Создать Offer</button>
+  <textarea id="offer" placeholder="Offer появится здесь"></textarea>
+  <button id="copyOffer">Скопировать Offer</button>
+
+  <h3>2. Принять Offer — телефон B</h3>
+  <textarea id="remoteOffer" placeholder="Вставь сюда Offer с телефона A"></textarea>
+  <button id="answerBtn">Создать Answer</button>
+  <textarea id="answer" placeholder="Answer появится здесь"></textarea>
+  <button id="copyAnswer">Скопировать Answer</button>
+
+  <h3>3. Завершить соединение — телефон A</h3>
+  <textarea id="remoteAnswer" placeholder="Вставь сюда Answer с телефона B"></textarea>
+  <button id="connectBtn">Применить Answer</button>
+
+  <h3>4. Отправка сообщений</h3>
+  <div id="messages">Сообщения появятся здесь.</div>
+  <input id="message" placeholder="Напиши тестовое сообщение">
+  <button id="sendBtn">Отправить сообщение</button>
+
+  <h3>Журнал</h3>
+  <div id="log"></div>
+</main>
+
+<script>
+let pc = null;
+let channel = null;
+let incoming = [];
+let outgoing = [];
+
+const $ = id => document.getElementById(id);
+
+function log(text) {
+  $('log').textContent += text + '\n';
+}
+
+function status(text) {
+  $('status').textContent = 'Статус: ' + text;
+}
+
+function makePeer() {
+  pc = new RTCPeerConnection({ iceServers: [] });
+
+  pc.onicecandidate = () => {
+    if (pc.iceGatheringState === 'complete') {
+      log('Сбор сетевых адресов завершён.');
+    }
+  };
+
+  pc.onicegatheringstatechange = () => {
+    if (pc.iceGatheringState === 'complete') {
+      log('ICE gathering: complete');
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    status('WebRTC: ' + pc.connectionState);
+    log('Состояние: ' + pc.connectionState);
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    log('ICE: ' + pc.iceConnectionState);
+  };
+
+  pc.ondatachannel = event => {
+    channel = event.channel;
+    setupChannel();
+  };
+}
+
+function setupChannel() {
+  channel.onopen = () => {
+    status('СОЕДИНЕНИЕ УСТАНОВЛЕНО');
+    log('Канал сообщений открыт!');
+  };
+
+  channel.onclose = () => status('Канал закрыт');
+
+  channel.onmessage = event => {
+    incoming.push('Собеседник: ' + event.data);
+    $('messages').textContent = incoming.concat(outgoing).join('\n');
+  };
+}
+
+function waitForIce() {
+  return new Promise((resolve, reject) => {
+    if (pc.iceGatheringState === 'complete') {
+      resolve();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Истекло время сбора ICE-кандидатов'));
+    }, 20000);
+
+    function check() {
+      if (pc.iceGatheringState === 'complete') {
+        cleanup();
+        resolve();
+      }
+    }
+
+    function cleanup() {
+      clearTimeout(timer);
+      pc.removeEventListener('icegatheringstatechange', check);
+    }
+
+    pc.addEventListener('icegatheringstatechange', check);
+  });
+}
+
+function showDescription(element, description) {
+  $(element).value = JSON.stringify(description);
+}
+
+function parseDescription(element) {
+  return JSON.parse($(element).value.trim());
+}
+
+$('offerBtn').onclick = async () => {
+  try {
+    makePeer();
+    channel = pc.createDataChannel('nexlink-chat');
+    setupChannel();
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    status('Собираем адреса для Offer…');
+
+    await waitForIce();
+    showDescription('offer', pc.localDescription);
+    status('Offer готов. Передай его на телефон B.');
+  } catch (e) {
+    log('Ошибка Offer: ' + e.message);
+    status('Ошибка создания Offer');
+  }
+};
+
+$('answerBtn').onclick = async () => {
+  try {
+    makePeer();
+    await pc.setRemoteDescription(parseDescription('remoteOffer'));
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    status('Собираем адреса для Answer…');
+
+    await waitForIce();
+    showDescription('answer', pc.localDescription);
+    status('Answer готов. Передай его на телефон A.');
+  } catch (e) {
+    log('Ошибка Answer: ' + e.message);
+    status('Ошибка создания Answer');
+  }
+};
+
+$('connectBtn').onclick = async () => {
+  try {
+    await pc.setRemoteDescription(parseDescription('remoteAnswer'));
+    status('Answer принят. Ждём соединения…');
+  } catch (e) {
+    log('Ошибка применения Answer: ' + e.message);
+    status('Не удалось применить Answer');
+  }
+};
+
+$('copyOffer').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('offer').value);
+    log('Offer скопирован.');
+  } catch {
+    $('offer').focus();
+    $('offer').select();
+    log('Выдели Offer и скопируй его вручную.');
+  }
+};
+
+$('copyAnswer').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($('answer').value);
+    log('Answer скопирован.');
+  } catch {
+    $('answer').focus();
+    $('answer').select();
+    log('Выдели Answer и скопируй его вручную.');
+  }
+};
+
+$('sendBtn').onclick = () => {
+  const text = $('message').value.trim();
+
+  if (!text) return;
+
+  if (!channel || channel.readyState !== 'open') {
+    log('Канал ещё не открыт. Отправка невозможна.');
+    status('Сначала установи соединение');
+    return;
+  }
+
+  channel.send(text);
+  outgoing.push('Ты: ' + text);
+  $('messages').textContent = incoming.concat(outgoing).join('\n');
+  $('message').value = '';
+};
+
+log('Готово. Открой эту страницу на двух телефонах.');
+</script>
+</body>
+</html>
