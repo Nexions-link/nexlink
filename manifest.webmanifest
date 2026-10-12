@@ -1,0 +1,10 @@
+{
+  "name": "NexLink",
+  "short_name": "NexLink",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "description": "Offline nearby messenger",
+  "icons": []
+}
