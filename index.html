@@ -1,25 +1,416 @@
-<!doctype html>
-<html lang="ru"><head><link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#0b0d10">
-<link rel="apple-touch-icon" href="./icon-192.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111318"><title>NexLink — прототип</title>
-<style>
-:root{color-scheme:dark;--bg:#0d0f13;--panel:#15181f;--line:#292e39;--text:#f2f4f8;--muted:#9299a8;--accent:#b8d5ff;--good:#8fe0b0}*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 80% -15%,#1e2a3d 0%,transparent 55%),var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}button,input{font:inherit}button{cursor:pointer}.app{max-width:760px;margin:auto;min-height:100vh;padding:env(safe-area-inset-top) 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column}header{display:flex;align-items:center;justify-content:space-between;padding:20px 2px 16px}.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#d5e6ff,#7ea8df);display:grid;place-items:center;color:#111723;font-weight:900;font-size:21px}.brand h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:3px}.status{border:1px solid #2b5940;background:#14271d;color:var(--good);font-size:11px;border-radius:999px;padding:7px 10px}.notice{border:1px solid #54482b;background:#211d14;color:#e8d8aa;border-radius:14px;padding:11px 13px;font-size:12px;line-height:1.45;margin-bottom:15px}.tabs{display:flex;gap:6px;background:#11141a;border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:16px}.tab{flex:1;border:0;background:transparent;color:var(--muted);padding:11px 6px;border-radius:10px;font-size:13px}.tab.active{background:#252c38;color:#fff}.view{display:none;flex:1}.view.active{display:flex;flex-direction:column;gap:13px}.section-head{display:flex;align-items:end;justify-content:space-between;margin:3px 1px}.section-head h2{font-size:18px;margin:0}.section-head p{margin:5px 0 0;color:var(--muted);font-size:13px}.small-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:8px 11px;font-size:12px}.card{background:linear-gradient(160deg,#191d25,#14171d);border:1px solid var(--line);border-radius:17px;padding:15px}.person{display:flex;align-items:center;gap:12px}.avatar{width:42px;height:42px;border-radius:14px;background:#263244;display:grid;place-items:center;color:#cfe1ff;font-weight:700;flex-shrink:0}.person .name{font-weight:650}.person .meta{font-size:12px;color:var(--muted);margin-top:4px}.person .right{margin-left:auto;text-align:right}.pill{font-size:10px;border-radius:999px;padding:5px 8px;background:#202b24;color:var(--good);display:inline-block}.connect{margin-top:13px;width:100%;padding:11px;border-radius:11px;border:1px solid #526d90;background:#202c3b;color:#d9e9ff;font-weight:600}.empty{padding:22px 15px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5}.chat-shell{display:flex;flex-direction:column;min-height:440px;flex:1;background:#12151b;border:1px solid var(--line);border-radius:17px;overflow:hidden}.chat-top{display:flex;align-items:center;gap:10px;padding:13px;border-bottom:1px solid var(--line);background:#171a21}.back{border:0;background:transparent;color:var(--accent);font-size:13px;padding:7px 4px}.chat-title{font-weight:650}.chat-state{font-size:11px;color:var(--muted);margin-top:3px}.messages{display:flex;flex-direction:column;gap:10px;padding:15px;flex:1;overflow:auto;max-height:54vh}.msg{max-width:84%;align-self:flex-start}.msg.mine{align-self:flex-end}.bubble{background:#242a34;border-radius:15px 15px 15px 5px;padding:10px 12px;font-size:14px;line-height:1.4;overflow-wrap:anywhere}.mine .bubble{background:#304a68;border-radius:15px 15px 5px 15px}.msg-time{font-size:10px;color:#858e9d;margin:4px 4px 0}.mine .msg-time{text-align:right}.composer{display:flex;gap:8px;padding:11px;border-top:1px solid var(--line);background:#171a21}.composer input{min-width:0;flex:1;background:#0f1116;border:1px solid #303642;color:var(--text);border-radius:12px;padding:12px;outline:none}.send{width:46px;border:0;border-radius:12px;background:var(--accent);color:#101722;font-weight:800;font-size:19px}.field-label{display:block;font-size:13px;color:var(--muted);margin:0 0 7px}.field{width:100%;border:1px solid var(--line);border-radius:12px;background:#0f1116;color:var(--text);padding:12px}.setting-row{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:13px 0;border-bottom:1px solid var(--line)}.setting-row:last-child{border-bottom:0}.setting-row strong{font-size:14px}.setting-row p{font-size:12px;color:var(--muted);margin:4px 0 0;line-height:1.4}.danger{border:1px solid #684044;background:#2a191c;color:#ffc5c5;border-radius:11px;padding:11px;width:100%;margin-top:12px}.footer{font-size:11px;color:#707888;text-align:center;padding:17px 0 2px}.toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#e1edff;color:#101722;padding:11px 15px;border-radius:12px;font-size:13px;box-shadow:0 8px 30px #0008;transition:.22s;max-width:90%;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}@media(min-width:600px){.app{padding-left:24px;padding-right:24px}.messages{max-height:520px}}
-</style></head><body><div class="app"><header><div class="brand"><div class="logo">N</div><div><h1>NexLink</h1><div class="sub">Связь рядом. Без лишнего.</div></div></div><div class="status">● Локальный режим</div></header>
-<div class="notice"><strong>Демо-прототип.</strong> Сообщения сохраняются на этом устройстве. «Соседи» — тестовые карточки: настоящего обнаружения телефонов и передачи сообщений между ними пока нет.</div>
-<nav class="tabs"><button class="tab active" data-view="nearby">Рядом</button><button class="tab" data-view="chat">Чат</button><button class="tab" data-view="settings">Профиль</button></nav>
-<section class="view active" id="nearby"><div class="section-head"><div><h2>Устройства рядом</h2><p>Макет будущего поиска соседей</p></div><button class="small-btn" id="refresh">Обновить</button></div>
-<div class="card"><div class="person"><div class="avatar">N</div><div><div class="name">NexLink Demo</div><div class="meta">Это твоё устройство · локально</div></div><div class="right"><span class="pill">Вы здесь</span></div></div></div>
-<div class="card"><div class="person"><div class="avatar">A</div><div><div class="name">Alex</div><div class="meta">Тестовый участник · не подключён</div></div><div class="right"><span class="pill" style="background:#282a30;color:#adb5c3">Демо</span></div></div><button class="connect" data-peer="Alex">Открыть тестовый чат</button></div>
-<div class="card"><div class="person"><div class="avatar" style="background:#342c42;color:#e0cfff">M</div><div><div class="name">Mira</div><div class="meta">Тестовый участник · не подключён</div></div><div class="right"><span class="pill" style="background:#282a30;color:#adb5c3">Демо</span></div></div><button class="connect" data-peer="Mira">Открыть тестовый чат</button></div>
-<div class="card empty">Следующий этап — заменить тестовый список реальным обнаружением устройств. Для этого понадобится отдельный транспорт связи и тестирование на двух телефонах.</div></section>
-<section class="view" id="chat"><div class="section-head"><div><h2>Сообщения</h2><p>Локальная история на этом iPhone</p></div><button class="small-btn" id="clearChat">Очистить</button></div><div class="chat-shell"><div class="chat-top"><button class="back" id="backNearby">‹ Рядом</button><div class="avatar" id="chatAvatar">N</div><div><div class="chat-title" id="chatPeer">Заметки</div><div class="chat-state" id="chatState">Только на этом устройстве</div></div></div><div class="messages" id="messages" aria-live="polite"></div><form class="composer" id="messageForm"><input id="messageInput" maxlength="2000" autocomplete="off" placeholder="Написать сообщение…" aria-label="Текст сообщения"><button class="send" aria-label="Отправить" type="submit">↑</button></form></div></section>
-<section class="view" id="settings"><div class="section-head"><div><h2>Профиль</h2><p>Настройки прототипа</p></div></div><div class="card"><label class="field-label" for="username">Имя в NexLink</label><input class="field" id="username" maxlength="24" placeholder="Например, Alex"><div style="height:15px"></div><button class="connect" id="saveName">Сохранить имя</button></div><div class="card"><div class="setting-row"><div><strong>Хранение истории</strong><p>Сообщения записываются в локальное хранилище браузера.</p></div><span class="pill">Локально</span></div><div class="setting-row"><div><strong>Реальный офлайн-обмен</strong><p>Пока не реализован. Нет сканирования соседей, радио-связи или mesh-пересылки.</p></div><span class="pill" style="background:#342b1c;color:#e7d19c">Позже</span></div><button class="danger" id="resetAll">Сбросить данные прототипа</button></div><div class="card empty">Не используй прототип для секретной переписки: это демонстрация интерфейса, без сквозного шифрования и реальной доставки.</div></section><div class="footer">NexLink · ранний прототип · v0.1</div></div><div class="toast" id="toast"></div>
-<script>
-const KEY='nexlink_proto_v1';const initial={name:'Alex',peer:'Заметки',chats:{'Заметки':[{from:'system',text:'Добро пожаловать в NexLink 👋',time:Date.now()},{from:'system',text:'Это первый прототип. Напиши сообщение ниже — оно сохранится на этом устройстве.',time:Date.now()}]}};let data;try{data=JSON.parse(localStorage.getItem(KEY))||JSON.parse(JSON.stringify(initial))}catch(e){data=JSON.parse(JSON.stringify(initial))}if(!data.chats)data.chats={'Заметки':[]};if(!data.name)data.name='Alex';const $=s=>document.querySelector(s);function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast('Не удалось сохранить данные браузера')}}function toast(s){const el=$('#toast');el.textContent=s;el.classList.add('show');clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>el.classList.remove('show'),2300)}function setView(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===v));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===v));if(v==='chat')renderMessages();if(v==='settings')$('#username').value=data.name;window.scrollTo(0,0)}function ensureChat(peer){if(!data.chats[peer])data.chats[peer]=[{from:'system',text:'Тестовый чат с '+peer+'. Это демонстрация: собеседник не получает сообщения на другом устройстве.',time:Date.now()}];data.peer=peer;persist();$('#chatPeer').textContent=peer;$('#chatAvatar').textContent=peer==='Mira'?'M':peer==='Alex'?'A':'N';$('#chatState').textContent=peer==='Заметки'?'Только на этом устройстве':'Демо · без реальной передачи';setView('chat')}function renderMessages(){const box=$('#messages');box.innerHTML='';const arr=data.chats[data.peer]||[];if(!arr.length){box.innerHTML='<div class="empty">Пока нет сообщений. Начни переписку.</div>';return}arr.forEach(m=>{const wrap=document.createElement('div');wrap.className='msg '+(m.from==='me'?'mine':'');const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=m.text;const time=document.createElement('div');time.className='msg-time';time.textContent=new Date(m.time).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});wrap.append(bubble,time);box.append(wrap)});box.scrollTop=box.scrollHeight}document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));document.querySelectorAll('[data-peer]').forEach(b=>b.addEventListener('click',()=>ensureChat(b.dataset.peer)));$('#messageForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#messageInput'),text=input.value.trim();if(!text)return;data.chats[data.peer]=data.chats[data.peer]||[];data.chats[data.peer].push({from:'me',text,time:Date.now()});persist();input.value='';renderMessages();if(data.peer!=='Заметки')toast('Сохранено локально — собеседник этого не получил')});$('#backNearby').addEventListener('click',()=>setView('nearby'));$('#refresh').addEventListener('click',()=>toast('В демо-режиме список участников фиксированный'));$('#saveName').addEventListener('click',()=>{const n=$('#username').value.trim().slice(0,24);if(!n){toast('Введи имя');return}data.name=n;persist();toast('Имя сохранено')});$('#clearChat').addEventListener('click',()=>{if(confirm('Очистить историю текущего чата?')){data.chats[data.peer]=[];persist();renderMessages();toast('История очищена')}});$('#resetAll').addEventListener('click',()=>{if(confirm('Удалить имя и все сообщения прототипа?')){localStorage.removeItem(KEY);data=JSON.parse(JSON.stringify(initial));persist();renderMessages();toast('Данные сброшены');setView('nearby')}});$('#chatPeer').textContent=data.peer||'Заметки';$('#chatAvatar').textContent=data.peer==='Mira'?'M':data.peer==='Alex'?'A':'N';$('#username').value=data.name;renderMessages();
-</script><script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js");
-  });
-}
-</script></body></html>
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NexLink">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>NexLink</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #12161c;
+      --panel2: #191f27;
+      --line: #272f39;
+      --text: #f1f4f8;
+      --muted: #8b96a5;
+      --accent: #a9c8ff;
+      --accent-dark: #243b5d;
+      --green: #7dd9ad;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .app {
+      max-width: 760px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: env(safe-area-inset-top) 16px calc(92px + env(safe-area-inset-bottom));
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 2px 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .logo {
+      width: 42px; height: 42px; border-radius: 14px;
+      display: grid; place-items: center;
+      background: linear-gradient(145deg, #d8e6ff, #789acb);
+      color: #101721; font-size: 22px; font-weight: 800;
+    }
+    .brand-name { font-size: 21px; font-weight: 750; letter-spacing: -.6px; }
+    .brand-sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .status {
+      border: 1px solid var(--line); border-radius: 30px;
+      padding: 8px 10px; color: var(--muted); font-size: 11px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
+    h1 { font-size: 27px; letter-spacing: -.7px; margin: 8px 0 8px; }
+    .subtitle { color: var(--muted); line-height: 1.5; font-size: 14px; margin: 0 0 22px; }
+    .section-head { display: flex; justify-content: space-between; align-items: center; margin: 25px 0 12px; }
+    .section-head h2 { font-size: 16px; margin: 0; }
+    .small { color: var(--muted); font-size: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 19px; padding: 16px; margin-bottom: 11px;
+    }
+    .hero {
+      padding: 20px; border-radius: 22px;
+      background: radial-gradient(circle at 100% 0%, #263951 0, transparent 48%), var(--panel);
+      border: 1px solid #2b3746;
+    }
+    .hero-label { color: var(--accent); font-size: 12px; font-weight: 650; letter-spacing: .6px; text-transform: uppercase; }
+    .hero h2 { font-size: 22px; line-height: 1.25; margin: 10px 0; }
+    .hero p { font-size: 13px; color: #aab5c4; line-height: 1.55; margin: 0 0 16px; }
+    .primary, .secondary, .icon-btn {
+      border: 0; border-radius: 13px; padding: 12px 15px;
+      font-weight: 650; font-size: 13px;
+    }
+    .primary { background: var(--accent); color: #111923; }
+    .secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+    .icon-btn { background: var(--panel2); color: var(--text); padding: 10px 12px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .row-main { min-width: 0; flex: 1; }
+    .avatar {
+      flex: 0 0 auto; width: 46px; height: 46px; border-radius: 16px;
+      display: grid; place-items: center; font-size: 17px; font-weight: 750;
+      background: #263446; color: #d6e5ff;
+    }
+    .avatar.me { background: #29352f; color: #b4f0cf; }
+    .avatar.demo { background: #302a42; color: #dfd0ff; }
+    .name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+    .preview { color: var(--muted); font-size: 12px; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill {
+      font-size: 10px; color: var(--muted); border: 1px solid var(--line);
+      padding: 5px 7px; border-radius: 20px; white-space: nowrap;
+    }
+    .notice {
+      border: 1px solid #343d49; background: #151b23; color: #b4bfce;
+      border-radius: 15px; padding: 13px; font-size: 12px; line-height: 1.55;
+      margin-top: 15px;
+    }
+    .notice strong { color: var(--text); }
+    .field-label { display: block; font-size: 12px; color: var(--muted); margin: 16px 0 8px; }
+    .field {
+      width: 100%; background: #0e1217; color: var(--text);
+      border: 1px solid var(--line); border-radius: 13px;
+      padding: 13px 14px; outline: none;
+    }
+    .field:focus { border-color: #708db6; }
+    .profile-id { color: var(--accent); font-size: 13px; margin-top: 8px; word-break: break-all; }
+    .bottom-nav {
+      position: fixed; z-index: 5; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: min(100%, 760px); display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 5px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(11,13,16,.94); backdrop-filter: blur(18px);
+      border-top: 1px solid var(--line);
+    }
+    .nav-btn {
+      background: transparent; color: var(--muted); border: 0;
+      border-radius: 13px; padding: 9px 5px; font-size: 11px;
+    }
+    .nav-btn .nav-icon { display: block; font-size: 20px; margin-bottom: 5px; }
+    .nav-btn.active { color: var(--accent); background: #18212c; }
+    .hidden { display: none !important; }
+    .chat-top { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .back { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 12px; padding: 10px 12px; }
+    .messages {
+      display: flex; flex-direction: column; gap: 10px;
+      min-height: 260px; max-height: 48dvh; overflow-y: auto;
+      padding: 8px 1px 15px;
+    }
+    .bubble {
+      max-width: 82%; padding: 11px 13px; border-radius: 16px;
+      background: var(--panel2); font-size: 14px; line-height: 1.45;
+      overflow-wrap: anywhere; white-space: pre-wrap;
+    }
+    .bubble.mine { align-self: flex-end; background: var(--accent-dark); border-bottom-right-radius: 5px; }
+    .bubble.theirs { align-self: flex-start; border-bottom-left-radius: 5px; }
+    .time { display: block; font-size: 10px; color: #a5b2c4; margin-top: 5px; text-align: right; }
+    .composer { display: flex; gap: 8px; margin-top: 10px; }
+    .composer input { flex: 1; min-width: 0; }
+    .empty { text-align: center; padding: 35px 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .empty-icon { font-size: 30px; margin-bottom: 12px; }
+    .list-button { width: 100%; text-align: left; border: 0; color: inherit; background: transparent; padding: 0; }
+    .footer-note { color: #657181; text-align: center; font-size: 11px; margin: 25px 0 0; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">N</div>
+        <div>
+          <div class="brand-name">NexLink</div>
+          <div class="brand-sub">Связь рядом. Без лишнего.</div>
+        </div>
+      </div>
+      <div class="status"><span class="dot"></span> Локальный режим</div>
+    </header>
+
+    <main>
+      <section id="nearby" class="screen">
+        <div class="hero">
+          <div class="hero-label">NexLink · 0.2</div>
+          <h2>Общение должно быть рядом.</h2>
+          <p>Наша цель — мессенджер, который сможет работать напрямую между устройствами, даже когда нет интернета.</p>
+          <button class="primary" onclick="showScreen('chats')">Открыть мои чаты →</button>
+        </div>
+
+        <div class="section-head">
+          <h2>Устройства рядом</h2>
+          <span class="pill">В разработке</span>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="avatar">⌁</div>
+            <div class="row-main">
+              <div class="name">Поиск устройств</div>
+              <div class="preview">Реальный поиск ещё не подключён</div>
+            </div>
+          </div>
+          <div class="notice">
+            <strong>Почему никого не видно?</strong><br>
+            Веб-версия пока не умеет обнаруживать соседние iPhone и передавать им сообщения напрямую. Для этого потребуется отдельный канал связи.
+          </div>
+        </div>
+
+        <div class="section-head"><h2>Как будет работать NexLink</h2></div>
+        <div class="card">
+          <div class="row">
+            <div class="avatar">1</div>
+            <div class="row-main">
+              <div class="name">Найти устройства</div>
+              <div class="preview">Без регистрации и центрального сервера</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="avatar">2</div>
+            <div class="row-main">
+              <div class="name">Начать переписку</div>
+              <div class="preview">Обмен сообщениями напрямую</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row">
+            <div class="avatar">3</div>
+            <div class="row-main">
+              <div class="name">Передавать сообщения дальше</div>
+              <div class="preview">Будущая mesh-сеть между устройствами</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="chats" class="screen hidden">
+        <h1>Мои чаты</h1>
+        <p class="subtitle">Твои локальные переписки. История сохраняется на этом устройстве.</p>
+        <button class="primary" onclick="createChat()" style="width:100%; margin-bottom:16px;">＋ Создать локальный чат</button>
+        <div id="chat-list"></div>
+        <div class="notice">Пока это локальные чаты для проверки интерфейса. Собеседник на другом телефоне эти сообщения не получит.</div>
+      </section>
+
+      <section id="conversation" class="screen hidden">
+        <div class="chat-top">
+          <button class="back" onclick="showScreen('chats')">←</button>
+          <div class="avatar" id="conversation-avatar">N</div>
+          <div class="row-main">
+            <div class="name" id="conversation-name">Чат</div>
+            <div class="preview">Локальная переписка на этом устройстве</div>
+          </div>
+        </div>
+        <div id="messages" class="messages"></div>
+        <form class="composer" id="message-form">
+          <input class="field" id="message-input" autocomplete="off" maxlength="2000" placeholder="Написать сообщение…" required>
+          <button class="primary" type="submit">➤</button>
+        </form>
+      </section>
+
+      <section id="profile" class="screen hidden">
+        <h1>Профиль</h1>
+        <p class="subtitle">Минимум данных. Без регистрации и пароля.</p>
+        <div class="card">
+          <div class="row">
+            <div class="avatar me" id="profile-avatar">N</div>
+            <div class="row-main">
+              <div class="name" id="profile-preview-name">Пользователь NexLink</div>
+              <div class="preview">Твой профиль на этом устройстве</div>
+              <div class="profile-id" id="profile-id"></div>
+            </div>
+          </div>
+          <label class="field-label" for="profile-name">Как тебя называть</label>
+          <input class="field" id="profile-name" maxlength="32" placeholder="Твоё имя">
+          <button class="primary" onclick="saveProfile()" style="width:100%; margin-top:14px;">Сохранить профиль</button>
+        </div>
+        <div class="card">
+          <div class="name">О NexLink</div>
+          <p class="preview" style="white-space:normal; line-height:1.7;">
+            Это ранний прототип. Имя и переписки хранятся локально в браузере. ID создаётся на устройстве и пока не является сетевым адресом.
+          </p>
+        </div>
+      </section>
+    </main>
+    <p class="footer-note">NexLink — экспериментальный проект. Не предназначен для экстренной связи.</p>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-screen="nearby" onclick="showScreen('nearby')"><span class="nav-icon">⌁</span>Рядом</button>
+    <button class="nav-btn" data-screen="chats" onclick="showScreen('chats')"><span class="nav-icon">▤</span>Чаты</button>
+    <button class="nav-btn" data-screen="profile" onclick="showScreen('profile')"><span class="nav-icon">◉</span>Профиль</button>
+  </nav>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const read = (key, fallback) => {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch { return fallback; }
+    };
+    const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+    const makeId = () => 'NX-' + Math.random().toString(36).slice(2, 6).toUpperCase()
+      + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+
+    let profile = read('nexlink-profile', null);
+    if (!profile) {
+      profile = { name: 'Пользователь NexLink', id: makeId() };
+      write('nexlink-profile', profile);
+    }
+    let chats = read('nexlink-chats', []);
+    let activeChatId = null;
+
+    function initials(name) {
+      return (name || 'N').trim().split(/\s+/).slice(0, 2).map(s => s[0] || '').join('').toUpperCase() || 'N';
+    }
+    function saveChats() { write('nexlink-chats', chats); }
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+      $(name).classList.remove('hidden');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.screen === name);
+      });
+      if (name === 'chats') renderChats();
+      if (name === 'profile') renderProfile();
+      window.scrollTo(0, 0);
+    }
+    function createChat() {
+      const name = prompt('Имя для нового локального чата:');
+      if (!name || !name.trim()) return;
+      const chat = { id: makeId(), name: name.trim().slice(0, 32), messages: [], created: Date.now() };
+      chats.unshift(chat);
+      saveChats();
+      openChat(chat.id);
+    }
+    function renderChats() {
+      const list = $('chat-list');
+      if (!chats.length) {
+        list.innerHTML = '<div class="card empty"><div class="empty-icon">▤</div><div>Пока нет чатов</div><div>Нажми «Создать локальный чат», чтобы проверить переписку.</div></div>';
+        return;
+      }
+      list.innerHTML = '';
+      chats.forEach(chat => {
+        const last = chat.messages[chat.messages.length - 1];
+        const card = document.createElement('div');
+        card.className = 'card';
+        const button = document.createElement('button');
+        button.className = 'list-button row';
+        button.innerHTML = '<div class="avatar">' + escapeHTML(initials(chat.name)) + '</div><div class="row-main"><div class="name"></div><div class="preview"></div></div><span class="pill">Локально</span>';
+        button.querySelector('.name').textContent = chat.name;
+        button.querySelector('.preview').textContent = last ? last.text : 'Начни переписку';
+        button.onclick = () => openChat(chat.id);
+        card.appendChild(button);
+        list.appendChild(card);
+      });
+    }
+    function openChat(id) {
+      activeChatId = id;
+      const chat = chats.find(c => c.id === id);
+      if (!chat) return showScreen('chats');
+      $('conversation-name').textContent = chat.name;
+      $('conversation-avatar').textContent = initials(chat.name);
+      showScreen('conversation');
+      renderMessages();
+      $('message-input').focus();
+    }
+    function renderMessages() {
+      const box = $('messages');
+      const chat = chats.find(c => c.id === activeChatId);
+      box.innerHTML = '';
+      if (!chat || !chat.messages.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Это начало переписки. Отправленные здесь сообщения сохраняются только на этом устройстве.';
+        box.appendChild(empty);
+        return;
+      }
+      chat.messages.forEach(message => {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble ' + (message.mine ? 'mine' : 'theirs');
+        bubble.textContent = message.text;
+        const time = document.createElement('span');
+        time.className = 'time';
+        time.textContent = new Date(message.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        bubble.appendChild(time);
+        box.appendChild(bubble);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+    $('message-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const input = $('message-input');
+      const text = input.value.trim();
+      const chat = chats.find(c => c.id === activeChatId);
+      if (!text || !chat) return;
+      chat.messages.push({ text, mine: true, time: Date.now() });
+      saveChats();
+      input.value = '';
+      renderMessages();
+    });
+    function renderProfile() {
+      $('profile-name').value = profile.name;
+      $('profile-preview-name').textContent = profile.name;
+      $('profile-avatar').textContent = initials(profile.name);
+      $('profile-id').textContent = 'ID: ' + profile.id;
+    }
+    function saveProfile() {
+      const name = $('profile-name').value.trim();
+      if (!name) { alert('Введи имя.'); return; }
+      profile.name = name.slice(0, 32);
+      write('nexlink-profile', profile);
+      renderProfile();
+      alert('Профиль сохранён на этом устройстве.');
+    }
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+    renderProfile();
+    renderChats();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
