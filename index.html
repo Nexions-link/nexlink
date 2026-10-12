@@ -9,6 +9,7 @@
 <title>NexLink</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
 <style>
@@ -301,7 +302,11 @@ hr { border:0; border-top:1px solid var(--line); margin:16px 0; }
         <p>Подключи другой телефон по QR-коду и начни переписку напрямую.</p>
         <button class="primary full" id="go-chats">Открыть мои чаты →</button>
       </div>
-
+<div class="card">
+  <h3>Пользователи онлайн</h3>
+  <p class="muted small" id="nearby-status">Подключаемся к сети…</p>
+  <div id="nearby-users"></div>
+</div>
       <div class="card">
         <h3>Подключить собеседника</h3>
         <p class="muted small">Создай чат, а затем обменяйся QR-кодами со вторым телефоном.</p>
@@ -952,6 +957,182 @@ $("save-profile").onclick = () => {
   toast("Профиль сохранён.");
 };
 
+const SUPABASE_URL = "https://bhoonstmbbxkiymdcegq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_reIbzrEOmxVOcrC0CuYGpA_OPVLP5wq";
+
+let supabaseClient = null;
+let presenceChannel = null;
+let onlineUsers = new Map();
+let presenceStarted = false;
+
+function renderNearbyUsers() {
+  const container = $("nearby-users");
+  container.replaceChildren();
+
+  const users = [...onlineUsers.values()]
+    .filter(user => user.id !== profile.id);
+
+  if (!users.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted small";
+    empty.textContent = "Пока никого нет. Открой NexLink на другом телефоне.";
+    container.appendChild(empty);
+    return;
+  }
+
+  users.forEach(user => {
+    const item = document.createElement("div");
+    item.className = "chat-item";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = (user.name || "П").trim().charAt(0).toUpperCase();
+
+    const info = document.createElement("div");
+    info.className = "chat-info";
+
+    const name = document.createElement("div");
+    name.className = "chat-name";
+    name.textContent = user.name || "Пользователь";
+
+    const status = document.createElement("div");
+    status.className = "chat-preview";
+    status.textContent = "В сети";
+
+    info.append(name, status);
+    item.append(avatar, info);
+    container.appendChild(item);
+  });
+}
+
+async function startNearbyPresence() {
+  const status = $("nearby-status");
+
+  try {
+    if (!window.supabase?.createClient) {
+      throw new Error("Не загрузилась библиотека Supabase.");
+    }
+
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    // Анонимная авторизация не требует электронной почты.
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      const { error } =
+        await supabaseClient.auth.signInAnonymously();
+
+      if (error) throw error;
+    }
+
+    const { data: authData } =
+      await supabaseClient.auth.getUser();
+
+    const userId = authData.user?.id;
+
+    if (!userId) {
+      throw new Error("Не удалось получить ID пользователя.");
+    }
+
+    presenceChannel = supabaseClient.channel("nexlink-online", {
+      config: {
+        presence: { key: userId }
+      }
+    });
+
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        onlineUsers.clear();
+
+        const state = presenceChannel.presenceState();
+
+        Object.values(state).flat().forEach(entry => {
+          if (entry?.id) {
+            onlineUsers.set(entry.id, entry);
+          }
+        });
+
+        renderNearbyUsers();
+        status.textContent =
+          "Подключено. Пользователей: " +
+          [...onlineUsers.keys()].filter(id => id !== profile.id).length;
+      })
+      .subscribe(async channelStatus => {
+        if (channelStatus === "SUBSCRIBED") {
+          const { error } = await presenceChannel.track({
+            id: userId,
+            name: profile.name || "Пользователь",
+            online_at: new Date().toISOString()
+          });
+
+          if (error) {
+            status.textContent = "Не удалось опубликовать статус онлайн.";
+            console.error(error);
+            return;
+          }
+
+          presenceStarted = true;
+          status.textContent = "Ты в сети. Ищем других пользователей…";
+          setGlobalStatus("В сети");
+        } else if (channelStatus === "CHANNEL_ERROR" ||
+                   channelStatus === "TIMED_OUT") {
+          status.textContent = "Ошибка сети. Попробуй обновить страницу.";
+          setGlobalStatus("Нет соединения");
+        }
+      });
+  } catch (error) {
+    console.error("NexLink presence:", error);
+    status.textContent =
+      "Не удалось подключиться: " + (error.message || "ошибка");
+  }
+}
+
+async function stopNearbyPresence() {
+  if (presenceChannel && supabaseClient) {
+    try {
+      await supabaseClient.removeChannel(presenceChannel);
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+  presenceChannel = null;
+  presenceStarted = false;
+}
+
+const originalSaveProfile = $("save-profile").onclick;
+
+$("save-profile").onclick = async () => {
+  const name = $("profile-name").value.trim();
+  profile.name = name || "Пользователь";
+  write(PROFILE_KEY, profile);
+  renderProfile();
+  toast("Профиль сохранён.");
+
+  if (presenceStarted && presenceChannel) {
+    const { data } = await supabaseClient.auth.getUser();
+    if (data.user) {
+      await presenceChannel.track({
+        id: data.user.id,
+        name: profile.name,
+        online_at: new Date().toISOString()
+      });
+    }
+  }
+};
+
+window.addEventListener("pagehide", () => {
+  if (presenceChannel && supabaseClient) {
+    supabaseClient.removeChannel(presenceChannel);
+  }
+});
+
+startNearbyPresence();
 window.addEventListener("pagehide", stopCamera);
 window.addEventListener("beforeunload", stopCamera);
 
