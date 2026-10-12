@@ -1,0 +1,263 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NexLink — QR Connect</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+body{margin:0;background:#0b0d10;color:#edf0f5;font:16px Arial,sans-serif;padding:20px}
+main{max-width:500px;margin:auto}
+h1{color:#b8c8df}
+button{background:#253449;color:white;border:1px solid #526781;
+border-radius:10px;padding:13px;margin:5px 0;width:100%;font-size:16px}
+button:disabled{opacity:.4}
+.card{background:#151a22;border:1px solid #303946;border-radius:14px;padding:15px;margin:14px 0}
+#qr{background:white;padding:12px;display:table;margin:12px auto;max-width:100%}
+#qr img,#qr canvas{max-width:100%;height:auto}
+video{width:100%;border-radius:12px}
+input{box-sizing:border-box;width:100%;padding:12px;background:#0b0d10;color:white;border:1px solid #526781;border-radius:8px}
+#log{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#b9c4d4}
+#messages{white-space:pre-wrap;overflow-wrap:anywhere;min-height:30px}
+.small{font-size:13px;color:#aab4c4}
+</style>
+</head>
+<body>
+<main>
+<h1>NexLink</h1>
+<p>Прямое соединение между телефонами</p>
+
+<div class="card">
+  <b>1. Подключение</b>
+  <button id="offer">Создать QR подключения</button>
+  <button id="scan">Сканировать QR другого телефона</button>
+  <div id="qr"></div>
+  <p id="status">Ожидание действий</p>
+  <video id="video" playsinline hidden></video>
+  <button id="stopScan" hidden>Закрыть камеру</button>
+</div>
+
+<div class="card">
+  <b>2. Сообщения</b>
+  <div id="messages"></div>
+  <input id="message" placeholder="Напиши сообщение">
+  <button id="send">Отправить</button>
+</div>
+
+<div class="card">
+  <b>Журнал</b>
+  <div id="log">NexLink QR готов.</div>
+</div>
+
+<p class="small">Тестовая версия. QR-коды содержат данные соединения. Не публикуй их в открытом доступе.</p>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let pc = null;
+let channel = null;
+let scanning = false;
+let stream = null;
+let busy = false;
+
+function log(s) {
+  $("log").textContent = s + "\n" + $("log").textContent;
+}
+function status(s) { $("status").textContent = s; }
+
+function makePC() {
+  pc = new RTCPeerConnection({iceServers: []});
+
+  pc.onconnectionstatechange = () => {
+    status("Состояние: " + pc.connectionState);
+    log("Соединение: " + pc.connectionState);
+  };
+
+  pc.ondatachannel = e => setupChannel(e.channel);
+
+  pc.oniceconnectionstatechange = () =>
+    log("ICE: " + pc.iceConnectionState);
+
+  return pc;
+}
+
+function setupChannel(ch) {
+  channel = ch;
+  channel.onopen = () => {
+    status("Соединено! Можно переписываться.");
+    log("Канал сообщений открыт.");
+  };
+  channel.onclose = () => log("Канал закрыт.");
+  channel.onmessage = e => {
+    $("messages").textContent += "Собеседник: " + e.data + "\n";
+  };
+}
+
+function waitIce() {
+  if (pc.iceGatheringState === "complete") return Promise.resolve();
+
+  return new Promise(resolve => {
+    const timer = setTimeout(resolve, 12000);
+    pc.addEventListener("icegatheringstatechange", function check() {
+      if (pc && pc.iceGatheringState === "complete") {
+        clearTimeout(timer);
+        pc.removeEventListener("icegatheringstatechange", check);
+        resolve();
+      }
+    });
+  });
+}
+
+function showQR(payload) {
+  $("qr").innerHTML = "";
+  try {
+    new QRCode($("qr"), {
+      text: JSON.stringify(payload),
+      width: 280,
+      height: 280,
+      correctLevel: QRCode.CorrectLevel.L
+    });
+    status("QR-код готов. Покажи его второму телефону.");
+  } catch (e) {
+    status("Не удалось создать QR. Попробуй ещё раз.");
+    log("Ошибка QR: " + e.message);
+  }
+}
+
+$("offer").onclick = async () => {
+  try {
+    stopCamera();
+    $("qr").innerHTML = "";
+    makePC();
+    setupChannel(pc.createDataChannel("nexlink-chat"));
+    status("Создаём соединение…");
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await waitIce();
+
+    showQR({type:"offer", sdp:pc.localDescription.sdp});
+    log("Offer создан. Теперь сканируй его со второго телефона.");
+  } catch(e) {
+    status("Ошибка создания соединения");
+    log(e.message);
+  }
+};
+
+async function handleQR(data) {
+  if (!data || !data.type || !data.sdp) throw new Error("QR не содержит данных NexLink.");
+
+  if (data.type === "offer") {
+    if (pc) pc.close();
+    makePC();
+    status("Получен запрос. Создаём ответ…");
+
+    await pc.setRemoteDescription({type:"offer", sdp:data.sdp});
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await waitIce();
+
+    showQR({type:"answer", sdp:pc.localDescription.sdp});
+    log("Ответ создан. Покажи этот QR первому телефону.");
+  } else if (data.type === "answer") {
+    if (!pc || !pc.localDescription || pc.localDescription.type !== "offer") {
+      throw new Error("Сначала создай QR подключения на этом телефоне.");
+    }
+    await pc.setRemoteDescription({type:"answer", sdp:data.sdp});
+    $("qr").innerHTML = "";
+    status("Ответ принят. Ждём соединения…");
+    log("Answer принят.");
+  } else {
+    throw new Error("Неизвестный тип QR.");
+  }
+}
+
+async function startCamera() {
+  if (typeof jsQR !== "function") {
+    throw new Error("Не загрузился сканер QR. Открой страницу с интернетом и обнови её.");
+  }
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:"environment"},
+    audio:false
+  });
+  $("video").srcObject = stream;
+  $("video").hidden = false;
+  $("stopScan").hidden = false;
+  await $("video").play();
+  scanning = true;
+  scanFrame();
+}
+
+function stopCamera() {
+  scanning = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  $("video").srcObject = null;
+  $("video").hidden = true;
+  $("stopScan").hidden = true;
+}
+
+function scanFrame() {
+  if (!scanning || busy) return;
+  const video = $("video");
+  if (video.readyState >= 2) {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d", {willReadFrequently:true});
+    ctx.drawImage(video, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const found = jsQR(img.data, img.width, img.height);
+
+    if (found) {
+      busy = true;
+      stopCamera();
+      try {
+        const data = JSON.parse(found.data);
+        handleQR(data).catch(e => {
+          status("Не удалось обработать QR");
+          log("Ошибка: " + e.message);
+        }).finally(() => busy = false);
+      } catch(e) {
+        status("Это не QR-код NexLink. Попробуй ещё раз.");
+        log(e.message);
+        busy = false;
+      }
+      return;
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+$("scan").onclick = async () => {
+  try {
+    await startCamera();
+    status("Наведи камеру на QR-код второго телефона.");
+  } catch(e) {
+    status("Не удалось открыть камеру.");
+    log(e.message);
+  }
+};
+
+$("stopScan").onclick = stopCamera;
+
+$("send").onclick = () => {
+  const msg = $("message").value.trim();
+  if (!msg) return;
+  if (!channel || channel.readyState !== "open") {
+    status("Сначала установи соединение.");
+    return;
+  }
+  channel.send(msg);
+  $("messages").textContent += "Ты: " + msg + "\n";
+  $("message").value = "";
+};
+
+$("message").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("send").click();
+});
+</script>
+</body>
+</html>
